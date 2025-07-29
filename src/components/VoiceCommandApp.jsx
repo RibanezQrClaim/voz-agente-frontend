@@ -1,55 +1,84 @@
-import { useState } from "react";
-console.log("🎯 VoiceCommandApp cargado");
-
-const Button = ({ onClick, children, variant }) => (
-  <button
-    onClick={onClick}
-    className={`px-4 py-2 rounded text-white ${
-      variant === "secondary"
-        ? "bg-blue-500"
-        : variant === "outline"
-        ? "border border-blue-500 text-blue-500"
-        : "bg-green-600"
-    }`}
-  >
-    {children}
-  </button>
-);
-
-const Textarea = ({ value, onChange, placeholder, className }) => (
-  <textarea
-    value={value}
-    onChange={onChange}
-    placeholder={placeholder}
-    className={`p-2 rounded border w-full ${className}`}
-    rows={4}
-  />
-);
+import React from 'react';
+import { useState } from 'react';
 
 export default function VoiceCommandApp() {
-  const [isRecording, setIsRecording] = useState(false);
-  const [inputText, setInputText] = useState("");
-  const [responseText, setResponseText] = useState("");
+  const [texto, setTexto] = useState('');
+  const [respuesta, setRespuesta] = useState('');
+  const [grabando, setGrabando] = useState(false);
 
-  const toggleRecording = () => {
-    setIsRecording((prev) => !prev);
-    // Aquí iría la lógica de grabación con MediaRecorder y envío a backend
+  const handleHablar = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Tu navegador no soporta reconocimiento de voz');
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'es-ES';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setTexto(transcript);
+      setGrabando(false);
+    };
+
+    recognition.onerror = (event) => {
+      console.error('Error de reconocimiento:', event.error);
+      setGrabando(false);
+    };
+
+    recognition.onend = () => {
+      setGrabando(false);
+    };
+
+    setGrabando(true);
+    recognition.start();
   };
 
-  const handleTextSubmit = async () => {
-    const mockResponse = `Respuesta para: "${inputText}"`;
-    setResponseText(mockResponse);
-  };
+  const handleEnviar = () => {
+    const respuestaTexto = `✅ Comando recibido: "${texto}"`;
+    setRespuesta(respuestaTexto);
 
-  const playTTS = () => {
-    const utterance = new SpeechSynthesisUtterance(responseText);
-    speechSynthesis.speak(utterance);
+    const synth = window.speechSynthesis;
+    const utterance = new SpeechSynthesisUtterance(respuestaTexto);
+    utterance.lang = 'es-ES';
+    synth.speak(utterance);
   };
 
   return (
-    <div style={{ background: 'white', padding: 20 }}>
-      <h1 style={{ color: 'red' }}>✅ Render directo sin Tailwind</h1>
-      <p>Este texto debería verse.</p>
+    <div className="p-6 max-w-xl mx-auto">
+      <h1 className="text-3xl font-bold mb-4">Asistente de Voz para Gmail</h1>
+
+      <textarea
+        className="border p-2 w-full h-24"
+        value={texto}
+        onChange={(e) => setTexto(e.target.value)}
+        placeholder="Di o escribe un comando..."
+      />
+
+      <div className="flex space-x-2 mt-2">
+        <button
+          onClick={handleHablar}
+          className="bg-purple-500 text-white px-4 py-2 rounded"
+        >
+          {grabando ? 'Detener' : '🎙️ Hablar'}
+        </button>
+
+        <button
+          onClick={handleEnviar}
+          className="bg-blue-500 text-white px-4 py-2 rounded"
+        >
+          Enviar comando
+        </button>
+      </div>
+
+      {respuesta && (
+        <div className="mt-4 text-green-700">
+          <strong>Respuesta:</strong> {respuesta}
+        </div>
+      )}
     </div>
   );
 }
